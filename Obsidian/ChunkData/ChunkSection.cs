@@ -2,6 +2,7 @@
 using Obsidian.Blocks;
 using Obsidian.Util.Collection;
 using Obsidian.Util.Registry;
+using System;
 
 namespace Obsidian.ChunkData
 {
@@ -14,7 +15,7 @@ namespace Obsidian.ChunkData
 
         public int? YBase { get; }
         public override byte BitsPerBlock { get; }
-        public override DataArray BlockStorage { get;  }
+        public override DataArray BlockStorage { get; }
 
         public override IBlockStatePalette Palette { get; }
 

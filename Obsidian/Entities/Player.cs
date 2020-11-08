@@ -1,7 +1,7 @@
 ﻿// This would be saved in a file called [playeruuid].dat which holds a bunch of NBT data.
 // https://wiki.vg/Map_Format
 using Obsidian.API;
-using Obsidian.Blocks;
+using Obsidian.API.Events;
 using Obsidian.Boss;
 using Obsidian.Chat;
 using Obsidian.Concurrency;
@@ -232,6 +232,15 @@ namespace Obsidian.Entities
         public async Task TeleportAsync(Position pos)
         {
             var tid = Globals.Random.Next(0, 999);
+
+            await client.Server.Events.InvokePlayerTeleportedAsync(
+                new PlayerTeleportEventArgs
+                (
+                    this,
+                    this.Location,
+                    pos
+                ));
+
             await this.client.QueuePacketAsync(new ClientPlayerPositionLook
             {
                 Position = pos,
@@ -239,6 +248,7 @@ namespace Obsidian.Entities
                 TeleportId = tid
             });
             this.TeleportId = tid;
+
         }
 
         public async Task TeleportAsync(IPlayer to) => await TeleportAsync(to as Player);
@@ -254,19 +264,35 @@ namespace Obsidian.Entities
             this.TeleportId = tid;
         }
 
-        public Task SendMessageAsync(string message, sbyte position = 0, Guid? sender = null) => client.QueuePacketAsync(new ChatMessagePacket(ChatMessage.Simple(message), position, sender ?? Guid.Empty));
+        public Task SendMessageAsync(string message, MessageType type = MessageType.Chat, Guid? sender = null) => client.QueuePacketAsync(new ChatMessagePacket(ChatMessage.Simple(message), type, sender ?? Guid.Empty));
 
-        public Task SendMessageAsync(IChatMessage message, Guid? sender = null) => SendMessageAsync(message as ChatMessage, sender);
-        public Task SendMessageAsync(ChatMessage message, Guid? sender = null) => client.QueuePacketAsync(new ChatMessagePacket(message, 0, sender ?? Guid.Empty));
+        public Task SendMessageAsync(IChatMessage message, MessageType type = MessageType.Chat, Guid? sender = null)
+        {
+            if (!(message is ChatMessage chatMessage))
+                return Task.FromException(new Exception("Message was of the wrong type or null. Expected instance supplied by IChatMessage.CreateNew."));
 
-        public Task SendSoundAsync(Sounds sound, SoundPosition position, SoundCategory category = SoundCategory.Master, float pitch = 1f, float volume = 1f) => client.QueuePacketAsync(new SoundEffect(sound, position, category, pitch, volume));
+            return this.SendMessageAsync(chatMessage, type, sender);
+        }
 
-        public Task SendNamedSoundAsync(string name, SoundPosition position, SoundCategory category = SoundCategory.Master, float pitch = 1f, float volume = 1f) => client.QueuePacketAsync(new NamedSoundEffect(name, position, category, pitch, volume));
+        public Task SendMessageAsync(ChatMessage message, MessageType type = MessageType.Chat, Guid? sender = null) => 
+            client.QueuePacketAsync(new ChatMessagePacket(message, type, sender ?? Guid.Empty));
+
+        public Task SendSoundAsync(int soundId, SoundPosition position, SoundCategory category = SoundCategory.Master, float pitch = 1f, float volume = 1f) => 
+            client.QueuePacketAsync(new SoundEffect(soundId, position, category, pitch, volume));
+
+        public Task SendNamedSoundAsync(string name, SoundPosition position, SoundCategory category = SoundCategory.Master, float pitch = 1f, float volume = 1f) => 
+            client.QueuePacketAsync(new NamedSoundEffect(name, position, category, pitch, volume));
 
         public Task SendBossBarAsync(Guid uuid, BossBarAction action) => client.QueuePacketAsync(new BossBar(uuid, action));
 
         public Task KickAsync(string reason) => this.client.DisconnectAsync(ChatMessage.Simple(reason));
-        public Task KickAsync(IChatMessage reason) => KickAsync(reason as ChatMessage);
+        public Task KickAsync(IChatMessage reason)
+        {
+            var chatMessage = reason as ChatMessage;
+            if (chatMessage is null)
+                return Task.FromException(new Exception("Message was of the wrong type or null. Expected instance supplied by IChatMessage.CreateNew."));
+            return KickAsync(chatMessage);
+        }
         public Task KickAsync(ChatMessage reason) => this.client.DisconnectAsync(reason);
 
         public override async Task WriteAsync(MinecraftStream stream)

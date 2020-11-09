@@ -2,6 +2,7 @@
 // https://wiki.vg/Map_Format
 using Obsidian.API;
 using Obsidian.API.Events;
+using Obsidian.Blocks;
 using Obsidian.Boss;
 using Obsidian.Chat;
 using Obsidian.Concurrency;
@@ -134,18 +135,6 @@ namespace Obsidian.Entities
             }
         }
 
-        public async Task OpenInventoryAsync(Inventory inventory)
-        {
-            await this.client.QueuePacketAsync(new OpenWindow(inventory));
-            if (!inventory.Items.IsEmpty)
-                await this.client.QueuePacketAsync(new WindowItems
-                {
-                    WindowId = inventory.Id,
-                    Count = (short)inventory.Items.Values.Count,
-                    Items = inventory.Items.Values.ToList()
-                });
-        }
-
         internal override async Task UpdateAsync(Server server, Position position, Angle yaw, Angle pitch, bool onGround)
         {
             await base.UpdateAsync(server, position, yaw, pitch, onGround);
@@ -274,13 +263,13 @@ namespace Obsidian.Entities
             return this.SendMessageAsync(chatMessage, type, sender);
         }
 
-        public Task SendMessageAsync(ChatMessage message, MessageType type = MessageType.Chat, Guid? sender = null) => 
+        public Task SendMessageAsync(ChatMessage message, MessageType type = MessageType.Chat, Guid? sender = null) =>
             client.QueuePacketAsync(new ChatMessagePacket(message, type, sender ?? Guid.Empty));
 
-        public Task SendSoundAsync(int soundId, SoundPosition position, SoundCategory category = SoundCategory.Master, float pitch = 1f, float volume = 1f) => 
+        public Task SendSoundAsync(Sounds soundId, SoundPosition position, SoundCategory category = SoundCategory.Master, float pitch = 1f, float volume = 1f) =>
             client.QueuePacketAsync(new SoundEffect(soundId, position, category, pitch, volume));
 
-        public Task SendNamedSoundAsync(string name, SoundPosition position, SoundCategory category = SoundCategory.Master, float pitch = 1f, float volume = 1f) => 
+        public Task SendNamedSoundAsync(string name, SoundPosition position, SoundCategory category = SoundCategory.Master, float pitch = 1f, float volume = 1f) =>
             client.QueuePacketAsync(new NamedSoundEffect(name, position, category, pitch, volume));
 
         public Task SendBossBarAsync(Guid uuid, BossBarAction action) => client.QueuePacketAsync(new BossBar(uuid, action));
@@ -314,6 +303,7 @@ namespace Obsidian.Entities
                 await stream.WriteEntityMetdata(19, EntityMetadataType.Nbt, this.RightShoulder);
         }
 
+        public Task OpenInventoryAsync(Inventory inventory) => this.client.QueuePacketAsync(new OpenWindow(inventory));
         public override string ToString() => this.Username;
 
         public async Task SetGamemodeAsync(Gamemode gamemode)

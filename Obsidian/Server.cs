@@ -652,14 +652,9 @@ namespace Obsidian
 
         struct QueueChat
         {
-            public string Message;
-            public sbyte Position;
+            public IChatMessage Message;
+            public MessageType Type;
         }
     }
 
-    public struct QueueChat
-    {
-        public IChatMessage Message;
-        public MessageType Type;
-    }
 }
